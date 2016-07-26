@@ -40,7 +40,7 @@ var View = function () {
 					_this.$container.find(selectorId).hide();
 				},
 				likeItem: function likeItem() {
-					_this.$container.find(selectorId).find(_this.likeSelector).attr('data-vote', 1).text(params.likes).toggleClass('liked');
+					_this.$container.find(selectorId).find(_this.likeSelector).text(params.likes).toggleClass('liked');
 				}
 			};
 

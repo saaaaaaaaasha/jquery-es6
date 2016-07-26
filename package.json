@@ -18,5 +18,13 @@
   },
   "dependencies": {
     "jquery": "^3.1.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HelloDeadline/Noveo_Training_jQuery_AJAX.git"
+  },
+  "bugs": {
+    "url": "https://github.com/HelloDeadline/Noveo_Training_jQuery_AJAX/issues"
+  },
+  "homepage": "https://github.com/HelloDeadline/Noveo_Training_jQuery_AJAX#readme"
 }
