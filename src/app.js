@@ -6,23 +6,23 @@ import Template from './base/template';
 import Controller from './base/controller';
 
 class jStickers {
-	constructor(el) {
+  constructor(el) {
 
-		let name = 'ES6';
-		$('body').append(`Hello from {{name}}`);
+    let name = 'ES6';
+    $('body').append(`Hello from {{name}}`);
 
-	  let template = new Template(),
-	      storage = new Store(),
-	      model = new Model({
-	        storage: storage
-	      }),
-	      view = new View({
-		      template: template
-		    }),
-		    controller = new Controller({
-		    	model: model, 
-		    	view: view
-		    }); 
+    let template = new Template(),
+        storage = new Store(),
+        model = new Model({
+          storage: storage
+        }),
+        view = new View({
+          template: template
+        }),
+        controller = new Controller({
+          model: model, 
+          view: view
+        }); 
   }
 };
 
