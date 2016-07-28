@@ -4,7 +4,7 @@
 
 To develop single web-application with the following functionality:
 
-![alt tag](https://raw.githubusercontent.com/saaaaaaaaasha/jquery-training/master/public/i/task.png)
+![alt tag](public/i/task.png)
 
 - Displays a list of entities (see. picture above)
 - This list will be loaded from the server in JSON format using the AJAX-request (you can create your own server, or use a cloud database with the REST API interface).
@@ -40,3 +40,6 @@ To check this project, you can start nodejs server and then open your browser an
 ```bash
 node server/server.js 
 ```
+
+![alt tag](public/i/test2.png)
+
