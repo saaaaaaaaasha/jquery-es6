@@ -20,8 +20,9 @@ export default class View {
         this.$container
           .find(params.selectorId)
           .find(this.likeSelector)
-          .text(params.likes)
-          .toggleClass('liked');
+          .toggleClass('liked')
+          .find('span')
+          .text(params.likes);
       }
     };
   }

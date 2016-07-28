@@ -8,7 +8,7 @@ export default class Template {
         <div class="stickers__item__title">{{title}}</div>
           <div class="stickers__item__description">{{description}}</div>
           <div class="stickers__item__like">
-          <a href="#" class="like{{is_liked}}">{{likes}}</a>
+          <a href="#" class="like{{is_liked}}">like (<span>{{likes}}</span>)</a>
        </div>
      </div>
      `;

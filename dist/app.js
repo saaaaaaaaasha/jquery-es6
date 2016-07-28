@@ -108,11 +108,8 @@ var jStickers = function () {
             });
           }
         });
-        console.log('3434');
         return ids;
       }).then(function (ids) {
-        //console.log(ids);
-        //return; 
         model.findAll(function (items) {
           items.forEach(function (item) {
             // if local data is outdated, deleted that from local storage

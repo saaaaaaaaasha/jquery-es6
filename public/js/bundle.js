@@ -109,11 +109,8 @@ var jStickers = function () {
             });
           }
         });
-        console.log('3434');
         return ids;
       }).then(function (ids) {
-        //console.log(ids);
-        //return; 
         model.findAll(function (items) {
           items.forEach(function (item) {
             // if local data is outdated, deleted that from local storage
@@ -744,7 +741,7 @@ var Template = function () {
   function Template() {
     _classCallCheck(this, Template);
 
-    this.defaultTemplate = '\n      <div class="stickers__item" data-id="{{id}}">\n        <div class="stickers__item__close">\n          <a href="#" class="close">X</a>\n        </div>  \n        <div class="stickers__item__title">{{title}}</div>\n          <div class="stickers__item__description">{{description}}</div>\n          <div class="stickers__item__like">\n          <a href="#" class="like{{is_liked}}">{{likes}}</a>\n       </div>\n     </div>\n     ';
+    this.defaultTemplate = '\n      <div class="stickers__item" data-id="{{id}}">\n        <div class="stickers__item__close">\n          <a href="#" class="close">X</a>\n        </div>  \n        <div class="stickers__item__title">{{title}}</div>\n          <div class="stickers__item__description">{{description}}</div>\n          <div class="stickers__item__like">\n          <a href="#" class="like{{is_liked}}">like (<span>{{likes}}</span>)</a>\n       </div>\n     </div>\n     ';
   }
 
   /**
@@ -823,7 +820,7 @@ var View = function () {
         _this.$container.find(params.selectorId).hide();
       },
       likeItem: function likeItem(params) {
-        _this.$container.find(params.selectorId).find(_this.likeSelector).text(params.likes).toggleClass('liked');
+        _this.$container.find(params.selectorId).find(_this.likeSelector).toggleClass('liked').find('span').text(params.likes);
       }
     };
   }
