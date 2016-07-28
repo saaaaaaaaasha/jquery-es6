@@ -15,6 +15,21 @@ var Template = function () {
     this.defaultTemplate = '\n      <div class="stickers__item" data-id="{{id}}">\n        <div class="stickers__item__close">\n          <a href="#" class="close">X</a>\n        </div>  \n        <div class="stickers__item__title">{{title}}</div>\n          <div class="stickers__item__description">{{description}}</div>\n          <div class="stickers__item__like">\n          <a href="#" class="like{{is_liked}}">{{likes}}</a>\n       </div>\n     </div>\n     ';
   }
 
+  /**
+  * Creates an HTML string and returns it for placement in app.
+  *
+  * @param {object} data The object containing keys to replace in the template 
+  * @returns {string} HTML String with data
+  *
+  * @example
+  * template.show({
+  *  id: 1,
+  *  name: "Toyota Corolla",
+  *  speed: 180,
+  * });
+  */
+
+
   _createClass(Template, [{
     key: 'show',
     value: function show(data) {

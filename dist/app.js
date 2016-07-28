@@ -28,11 +28,13 @@ var _controller2 = _interopRequireDefault(_controller);
 
 var _validation = require('./util/validation');
 
-var _validation2 = _interopRequireDefault(_validation);
+var validation = _interopRequireWildcard(_validation);
 
 var _external_store = require('./base/external_store');
 
 var _external_store2 = _interopRequireDefault(_external_store);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -53,21 +55,13 @@ var jStickers = function () {
      * @type {ExternalStore} [externalStorage]
      */
     var externalStorage = new _external_store2.default(),
-
-
-    /**
-     * [validator description]
-     * @type {Validation}
-     */
-    validator = new _validation2.default(),
         template = new _template2.default(),
         storage = new _store2.default({
       name: 'stickers',
       external: externalStorage
     }),
         model = new _model2.default({
-      storage: storage,
-      validator: validator
+      storage: storage
     }),
         view = new _view2.default({
       template: template
@@ -105,12 +99,10 @@ var jStickers = function () {
               if (data.length) {
                 model.update(item, function (updateData) {
                   console.log('update ' + data[0].title + ' (#' + data[0].id + ')');
-                  controller.renderItems();
                 });
               } else {
                 model.save(item, function (newData) {
                   console.log('create ' + newData[0].title + ' (#' + newData[0].id + ')');
-                  controller.renderItems();
                 });
               }
             });
@@ -129,6 +121,8 @@ var jStickers = function () {
             }
           });
         });
+      }).then(function (ids) {
+        controller.renderItems();
       }).catch(function (error) {
         // error instanceof Error. show message for testing
         console.error(error.message);

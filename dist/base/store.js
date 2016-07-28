@@ -8,12 +8,14 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-//import Helpers from './util/helpers';
-
+/**
+ * class Store
+ * Use for manipulate object (save in the localstorage, crud operation)
+ */
 var Store = function () {
 
   /**
-   * Create a new storage object and will create an empty collection 
+   * Create a new client side object storage and will create an empty collection 
    * if no collection already exists.
    * 
    * @constructor
@@ -24,29 +26,26 @@ var Store = function () {
     _classCallCheck(this, Store);
 
     var callback = options.callback || function () {};
-    var name = options.name;
 
     /**
      * @see https://developer.mozilla.org/docs/Web/API/Window/localStorage
      */
     this.localStorage = window.localStorage || {};
-    this._key = name;
+
+    /**
+     * External store must to have "send" method for send data to server
+     * @type {object} this.external
+     */
     this.external = options.external;
+    this._key = options.name;
 
     // Create localStorage with appropriate name if it didn't exits
-    if (!this.localStorage[name]) {
+    if (!this.localStorage[this._key]) {
       var data = { models: [] };
       this.set(data);
     }
 
-    console.log('Store start');
-    //this.request('/stickers', {
-    //  onSuccess: callback
-    //});
-
     callback(this.get());
-
-    //callback.call(this, this.findAll());
   }
 
   /**
@@ -135,7 +134,8 @@ var Store = function () {
       callback = callback || function () {};
 
       this.find({ id: +id }, function (items) {
-        var item = items[0];
+        var item = items.pop();
+
         _this.external.send('like', { id: id, 'vote': vote }, function (res) {
           if (res.status) {
             item.likes = res.likes;
@@ -179,21 +179,23 @@ var Store = function () {
     value: function remove(id, callback) {
       var _this2 = this;
 
+      callback = callback || function () {};
+      id = parseInt(id, 10);
+
       var data = this.get();
       var models = data.models;
 
-      callback = callback || function () {};
       this.external.send('delete', { id: id }, function (res) {
-        //if (res.status) {
-        for (var i = 0, length = models.length; i < length; i++) {
-          if (models[i].id === +id) {
-            models.splice(i, 1);
-            break;
+        if (res) {
+          for (var i = 0, length = models.length; i < length; i++) {
+            if (models[i].id === id) {
+              models.splice(i, 1);
+              break;
+            }
           }
+          _this2.set(data);
+          callback.call(_this2, _this2.get().models);
         }
-        _this2.set(data);
-        callback.call(_this2, _this2.get().models);
-        //}
       });
     }
 
@@ -208,6 +210,8 @@ var Store = function () {
       this.set({ models: [] });
       callback.call(this, this.get().models);
     }
+
+    // getter/setter for data
 
     /**
      * Set data to store
@@ -231,65 +235,6 @@ var Store = function () {
     value: function get() {
       return JSON.parse(localStorage[this._key]);
     }
-
-    /*
-      findAll(callback) {
-        callback = callback || function () {};
-        console.log('Store.findAll');
-        this.request('/stickers', {
-          onSuccess: callback
-        });
-      }
-    
-      remove(id, callback) {
-        console.log('Store.remove');
-        this.request('/sticker/:id', {
-          method: 'DELETE',
-          id: id,
-          onSuccess: callback
-        });
-      }
-    
-      like(id, callback) {
-        console.log('Store.like');
-        this.request('/sticker/:id/like', {
-          method: 'POST',
-          id: id,
-          onSuccess: callback
-        });
-      }*/
-
-  }, {
-    key: 'request',
-    value: function request(url, options) {
-      options.onSuccess(JSON.parse('[{"id":42,"title":"New title","description":"Some very interesting description","likes":101},{"id":34,"title":"sdfsd","description":"sfdsf","likes":16},{"id":48,"title":"New title","description":"Some very interesting description","likes":15},{"id":38,"title":"sdfsd","description":"sfdsf","likes":0}]'));
-    }
-
-    /*
-      if (!url) {
-        return false;
-      }
-       if (options.id) {
-        url = url.replace(':id', options.id);
-      }
-       var resolve = (typeof options.onSuccess === 'function') ? options.onSuccess : function () {};
-      var reject = (typeof options.onError === 'function') ? option.onError : function () {};
-      var params = {};
-       params.url = url;
-      params.method = options.method || 'GET';
-      params.dataType = options.dataType || 'json';
-      params.data = options.data || null;
-      params.contentType = 'application/json';
-       params.success = function(data) {
-        resolve(data);
-      };
-      params.error = function(jqXHR, textStatus) {
-        reject('Request failed: ' + textStatus);
-      };
-       var request = $.ajax(params);
-    };
-    */
-
   }]);
 
   return Store;

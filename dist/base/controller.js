@@ -9,6 +9,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Controller = function () {
+
+  /**
+   * Take a model & view, then act as controller between them
+   * @param  {object} [options] Object with the model and view instance
+   */
   function Controller(options) {
     var _this = this;
 
@@ -27,6 +32,12 @@ var Controller = function () {
     this.renderItems();
   }
 
+  /**
+   * Will remove item by id from the DOM and storage.
+   * @param  {number} id
+   */
+
+
   _createClass(Controller, [{
     key: 'removeItem',
     value: function removeItem(id) {
@@ -36,6 +47,13 @@ var Controller = function () {
         return _this2.view.render('removeItem', { id: id });
       });
     }
+
+    /**
+     * Will add/remove like for item by id and render that.
+     * @param  {number} id
+     * @param  {boolean} vote Add like: true, Remove like: false
+     */
+
   }, {
     key: 'likeItem',
     value: function likeItem(id, vote) {
@@ -45,6 +63,11 @@ var Controller = function () {
         return _this3.view.render('likeItem', { id: id, likes: likes });
       });
     }
+
+    /**
+     * Method fires on load or update data. Gets all items & displays them
+     */
+
   }, {
     key: 'renderItems',
     value: function renderItems() {

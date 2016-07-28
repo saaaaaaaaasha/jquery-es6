@@ -1,9 +1,11 @@
-//import Helpers from './util/helpers';
-
+/**
+ * class Store
+ * Use for manipulate object (save in the localstorage, crud operation)
+ */
 export default class Store {
 
   /**
-   * Create a new storage object and will create an empty collection 
+   * Create a new client side object storage and will create an empty collection 
    * if no collection already exists.
    * 
    * @constructor
@@ -12,31 +14,26 @@ export default class Store {
    */
   constructor(options) {
     let callback = options.callback || function () {};
-    let name = options.name;
-
 
     /**
      * @see https://developer.mozilla.org/docs/Web/API/Window/localStorage
      */
     this.localStorage = window.localStorage || {};
-    this._key = name;
+
+    /**
+     * External store must to have "send" method for send data to server
+     * @type {object} this.external
+     */
     this.external = options.external;
+    this._key = options.name;
 
     // Create localStorage with appropriate name if it didn't exits
-    if (!this.localStorage[name]) {
+    if (!this.localStorage[this._key]) {
       var data = {models: []};
       this.set(data);
     }
 
-
-    console.log('Store start');
-    //this.request('/stickers', {
-    //  onSuccess: callback
-    //});
-
     callback(this.get());
-
-    //callback.call(this, this.findAll());
   }
 
   /**
@@ -111,27 +108,27 @@ export default class Store {
     callback = callback || function () {};
 
     this.find({id: +id}, (items) => {
-      let item = items[0];
+      let item = items.pop();
+
       this.external.send('like', {id: id, 'vote': vote}, (res) => {
         if (res.status) {
           item.likes = res.likes;
           item.is_liked = !!vote;
           this.update(item, item.id, () => {
-            callback(item.likes);  
+            callback(item.likes);
           });
         }
       });
     });
   }
 
-
   update(updateData, id, callback) {
-    var data = this.get(),
-      models = data.models;
+    let data = this.get(),
+        models = data.models;
 
-    for (var i = 0; i < models.length; i++) {
+    for (let i = 0; i < models.length; i++) {
       if (models[i].id === id) {
-        for (var key in updateData) {
+        for (let key in updateData) {
           if (updateData.hasOwnProperty(key)) { 
             models[i][key] = updateData[key];
           }
@@ -150,21 +147,23 @@ export default class Store {
    * @param {function} callback
    */
   remove(id, callback) {
-    var data = this.get();
-    var models = data.models;
-
     callback = callback || function () {};
+    id = parseInt(id, 10);
+
+    let data = this.get();
+    let models = data.models;
+
     this.external.send('delete', {id: id}, (res) => {
-      //if (res.status) {
-        for (var i = 0, length = models.length; i < length; i++) {
-          if (models[i].id === +id) {
+      if (res) {
+        for (let i = 0, length = models.length; i < length; i++) {
+          if (models[i].id === id) {
             models.splice(i, 1);
             break;
           }
         }
         this.set(data);
         callback.call(this, this.get().models);
-      //}
+      }
     });
   }
 
@@ -176,6 +175,8 @@ export default class Store {
     this.set({models: []});
     callback.call(this, this.get().models);
   }
+
+  // getter/setter for data
 
   /**
    * Set data to store
@@ -193,67 +194,4 @@ export default class Store {
   get() {
     return JSON.parse(localStorage[this._key]);
   }
-
-
-
-/*
-  findAll(callback) {
-    callback = callback || function () {};
-    console.log('Store.findAll');
-    this.request('/stickers', {
-      onSuccess: callback
-    });
-  }
-
-  remove(id, callback) {
-    console.log('Store.remove');
-    this.request('/sticker/:id', {
-      method: 'DELETE',
-      id: id,
-      onSuccess: callback
-    });
-  }
-
-  like(id, callback) {
-    console.log('Store.like');
-    this.request('/sticker/:id/like', {
-      method: 'POST',
-      id: id,
-      onSuccess: callback
-    });
-  }*/
-
-  request(url, options) { 
-    options.onSuccess(JSON.parse('[{"id":42,"title":"New title","description":"Some very interesting description","likes":101},{"id":34,"title":"sdfsd","description":"sfdsf","likes":16},{"id":48,"title":"New title","description":"Some very interesting description","likes":15},{"id":38,"title":"sdfsd","description":"sfdsf","likes":0}]'));
-  }
-
-  /*
-    if (!url) {
-      return false;
-    }
-
-    if (options.id) {
-      url = url.replace(':id', options.id);
-    }
-
-    var resolve = (typeof options.onSuccess === 'function') ? options.onSuccess : function () {};
-    var reject = (typeof options.onError === 'function') ? option.onError : function () {};
-    var params = {};
-
-    params.url = url;
-    params.method = options.method || 'GET';
-    params.dataType = options.dataType || 'json';
-    params.data = options.data || null;
-    params.contentType = 'application/json';
-
-    params.success = function(data) {
-      resolve(data);
-    };
-    params.error = function(jqXHR, textStatus) {
-      reject('Request failed: ' + textStatus);
-    };
-
-    var request = $.ajax(params);
-  };
-*/
 }

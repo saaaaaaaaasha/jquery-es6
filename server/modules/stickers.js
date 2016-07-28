@@ -31,18 +31,18 @@ class Stickers {
     return this.findById(id, true);
   }
 
-  updateLikes(id, vote, callback) { 
+  updateLikes(params, callback) { 
     callback = callback || function() {};
-    let item = this.findById(id);
+    let item = this.findById(params.id);
 
     if (item) {
-      item.likes += vote;
+      item.likes += params.vote;
       if (item.likes < 0) {
         item.likes = 0;
       }
       return this.updateStore((error) => {
-        let voteMsg = (vote > 0 ? '' : 'dis') + 'liked';
-        console.log('Item (id: '+ id + ') was ' + voteMsg +' (likes: ' + item.likes + ')');
+        let voteMsg = (params.vote > 0 ? '' : 'dis') + 'liked';
+        console.log('Item (id: '+ params.id + ') was ' + voteMsg +' (likes: ' + item.likes + ')');
         callback({
           status: true,
           likes: item.likes
@@ -63,10 +63,10 @@ class Stickers {
       this.items.splice(index, 1); // delete item from array by index
       return this.updateStore((error) => {
         console.log('Item (id: '+ id + ') has been deleted.');
-        callback(true);
+        callback({status: true});
       });
     }
-    callback(false);
+    callback({status: false});
   }
 
   updateStore(callback) {

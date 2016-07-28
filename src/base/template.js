@@ -14,8 +14,20 @@ export default class Template {
      `;
   }
 
+   /**
+   * Creates an HTML string and returns it for placement in app.
+   *
+   * @param {object} data The object containing keys to replace in the template 
+   * @returns {string} HTML String with data
+   *
+   * @example
+   * template.show({
+   *  id: 1,
+   *  name: "Toyota Corolla",
+   *  speed: 180,
+   * });
+   */
   show(data){
-
     const view = data.map(d => {
       let template = this.defaultTemplate;
 

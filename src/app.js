@@ -4,7 +4,7 @@ import Model from './base/model';
 import Store from './base/store';
 import Template from './base/template';
 import Controller from './base/controller';
-import Validation from './util/validation';
+import * as validation from './util/validation';
 import ExternalStore from './base/external_store';
 
 /**
@@ -22,19 +22,13 @@ class jStickers {
      */
     let externalStorage = new ExternalStore(),
 
-    /**
-     * [validator description]
-     * @type {Validation}
-     */
-        validator = new Validation(),
         template = new Template(),
         storage = new Store({
         	name: 'stickers',
         	external: externalStorage
         }),
         model = new Model({
-          storage: storage,
-          validator: validator
+          storage: storage
         }),
         view = new View({
           template: template
@@ -78,12 +72,9 @@ class jStickers {
           });
         }
     	});
-      console.log('3434');
       return ids;
     })
     .then( ids => {
-      //console.log(ids);
-      //return; 
       model.findAll((items) => {
         items.forEach((item) => {
           // if local data is outdated, deleted that from local storage

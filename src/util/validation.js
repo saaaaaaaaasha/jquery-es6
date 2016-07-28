@@ -1,20 +1,11 @@
-export default class Validation {
-  constructor() {
-    this.isNaN = window.isNaN || ( (n) => n != n );
-    this.isFinite = window.isFinite || ( (n) => typeof n === 'number' );
-  }
-
-  isNumeric(n) {
-      return !this.isNaN(parseFloat(n)) && this.isFinite(n);
-  }
-
-  isString(s) {
-      return typeof s === 'string';
-  }
-
-  isEmpty(s) {
-      return !(this.isNumeric(s) || !!s);
-  }
+export function isNumeric(n) {
+  return !window.isNaN(parseFloat(n)) && window.isFinite(n);
 }
 
-// (new Validation()).isNumeric(45); // true
+export function isString(s) {
+  return typeof s === 'string';
+}
+
+export function isEmpty(s) {
+  return !(this.isNumeric(s) || !!s);
+}

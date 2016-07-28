@@ -29,11 +29,13 @@ var _controller2 = _interopRequireDefault(_controller);
 
 var _validation = require('./util/validation');
 
-var _validation2 = _interopRequireDefault(_validation);
+var validation = _interopRequireWildcard(_validation);
 
 var _external_store = require('./base/external_store');
 
 var _external_store2 = _interopRequireDefault(_external_store);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -54,21 +56,13 @@ var jStickers = function () {
      * @type {ExternalStore} [externalStorage]
      */
     var externalStorage = new _external_store2.default(),
-
-
-    /**
-     * [validator description]
-     * @type {Validation}
-     */
-    validator = new _validation2.default(),
         template = new _template2.default(),
         storage = new _store2.default({
       name: 'stickers',
       external: externalStorage
     }),
         model = new _model2.default({
-      storage: storage,
-      validator: validator
+      storage: storage
     }),
         view = new _view2.default({
       template: template
@@ -106,12 +100,10 @@ var jStickers = function () {
               if (data.length) {
                 model.update(item, function (updateData) {
                   console.log('update ' + data[0].title + ' (#' + data[0].id + ')');
-                  controller.renderItems();
                 });
               } else {
                 model.save(item, function (newData) {
                   console.log('create ' + newData[0].title + ' (#' + newData[0].id + ')');
-                  controller.renderItems();
                 });
               }
             });
@@ -130,6 +122,8 @@ var jStickers = function () {
             }
           });
         });
+      }).then(function (ids) {
+        controller.renderItems();
       }).catch(function (error) {
         // error instanceof Error. show message for testing
         console.error(error.message);
@@ -155,6 +149,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Controller = function () {
+
+  /**
+   * Take a model & view, then act as controller between them
+   * @param  {object} [options] Object with the model and view instance
+   */
   function Controller(options) {
     var _this = this;
 
@@ -173,6 +172,12 @@ var Controller = function () {
     this.renderItems();
   }
 
+  /**
+   * Will remove item by id from the DOM and storage.
+   * @param  {number} id
+   */
+
+
   _createClass(Controller, [{
     key: 'removeItem',
     value: function removeItem(id) {
@@ -182,6 +187,13 @@ var Controller = function () {
         return _this2.view.render('removeItem', { id: id });
       });
     }
+
+    /**
+     * Will add/remove like for item by id and render that.
+     * @param  {number} id
+     * @param  {boolean} vote Add like: true, Remove like: false
+     */
+
   }, {
     key: 'likeItem',
     value: function likeItem(id, vote) {
@@ -191,6 +203,11 @@ var Controller = function () {
         return _this3.view.render('likeItem', { id: id, likes: likes });
       });
     }
+
+    /**
+     * Method fires on load or update data. Gets all items & displays them
+     */
+
   }, {
     key: 'renderItems',
     value: function renderItems() {
@@ -326,9 +343,8 @@ var Model = function () {
 				_classCallCheck(this, Model);
 
 				this.storage = options.storage;
-				this.validator = options.validator;
 
-				// (?)
+				// @todo To need to move this logic in other class, like "Sticker extend Collection"
 				this.fieldMap = ['id', 'title', 'description', 'likes', 'is_liked'];
 		}
 
@@ -461,7 +477,6 @@ var Model = function () {
           return false;
         }
       });*/
-
 						return true;
 				}
 		}]);
@@ -481,12 +496,14 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-//import Helpers from './util/helpers';
-
+/**
+ * class Store
+ * Use for manipulate object (save in the localstorage, crud operation)
+ */
 var Store = function () {
 
   /**
-   * Create a new storage object and will create an empty collection 
+   * Create a new client side object storage and will create an empty collection 
    * if no collection already exists.
    * 
    * @constructor
@@ -497,29 +514,26 @@ var Store = function () {
     _classCallCheck(this, Store);
 
     var callback = options.callback || function () {};
-    var name = options.name;
 
     /**
      * @see https://developer.mozilla.org/docs/Web/API/Window/localStorage
      */
     this.localStorage = window.localStorage || {};
-    this._key = name;
+
+    /**
+     * External store must to have "send" method for send data to server
+     * @type {object} this.external
+     */
     this.external = options.external;
+    this._key = options.name;
 
     // Create localStorage with appropriate name if it didn't exits
-    if (!this.localStorage[name]) {
+    if (!this.localStorage[this._key]) {
       var data = { models: [] };
       this.set(data);
     }
 
-    console.log('Store start');
-    //this.request('/stickers', {
-    //  onSuccess: callback
-    //});
-
     callback(this.get());
-
-    //callback.call(this, this.findAll());
   }
 
   /**
@@ -608,7 +622,8 @@ var Store = function () {
       callback = callback || function () {};
 
       this.find({ id: +id }, function (items) {
-        var item = items[0];
+        var item = items.pop();
+
         _this.external.send('like', { id: id, 'vote': vote }, function (res) {
           if (res.status) {
             item.likes = res.likes;
@@ -652,21 +667,23 @@ var Store = function () {
     value: function remove(id, callback) {
       var _this2 = this;
 
+      callback = callback || function () {};
+      id = parseInt(id, 10);
+
       var data = this.get();
       var models = data.models;
 
-      callback = callback || function () {};
       this.external.send('delete', { id: id }, function (res) {
-        //if (res.status) {
-        for (var i = 0, length = models.length; i < length; i++) {
-          if (models[i].id === +id) {
-            models.splice(i, 1);
-            break;
+        if (res) {
+          for (var i = 0, length = models.length; i < length; i++) {
+            if (models[i].id === id) {
+              models.splice(i, 1);
+              break;
+            }
           }
+          _this2.set(data);
+          callback.call(_this2, _this2.get().models);
         }
-        _this2.set(data);
-        callback.call(_this2, _this2.get().models);
-        //}
       });
     }
 
@@ -681,6 +698,8 @@ var Store = function () {
       this.set({ models: [] });
       callback.call(this, this.get().models);
     }
+
+    // getter/setter for data
 
     /**
      * Set data to store
@@ -704,65 +723,6 @@ var Store = function () {
     value: function get() {
       return JSON.parse(localStorage[this._key]);
     }
-
-    /*
-      findAll(callback) {
-        callback = callback || function () {};
-        console.log('Store.findAll');
-        this.request('/stickers', {
-          onSuccess: callback
-        });
-      }
-    
-      remove(id, callback) {
-        console.log('Store.remove');
-        this.request('/sticker/:id', {
-          method: 'DELETE',
-          id: id,
-          onSuccess: callback
-        });
-      }
-    
-      like(id, callback) {
-        console.log('Store.like');
-        this.request('/sticker/:id/like', {
-          method: 'POST',
-          id: id,
-          onSuccess: callback
-        });
-      }*/
-
-  }, {
-    key: 'request',
-    value: function request(url, options) {
-      options.onSuccess(JSON.parse('[{"id":42,"title":"New title","description":"Some very interesting description","likes":101},{"id":34,"title":"sdfsd","description":"sfdsf","likes":16},{"id":48,"title":"New title","description":"Some very interesting description","likes":15},{"id":38,"title":"sdfsd","description":"sfdsf","likes":0}]'));
-    }
-
-    /*
-      if (!url) {
-        return false;
-      }
-       if (options.id) {
-        url = url.replace(':id', options.id);
-      }
-       var resolve = (typeof options.onSuccess === 'function') ? options.onSuccess : function () {};
-      var reject = (typeof options.onError === 'function') ? option.onError : function () {};
-      var params = {};
-       params.url = url;
-      params.method = options.method || 'GET';
-      params.dataType = options.dataType || 'json';
-      params.data = options.data || null;
-      params.contentType = 'application/json';
-       params.success = function(data) {
-        resolve(data);
-      };
-      params.error = function(jqXHR, textStatus) {
-        reject('Request failed: ' + textStatus);
-      };
-       var request = $.ajax(params);
-    };
-    */
-
   }]);
 
   return Store;
@@ -786,6 +746,21 @@ var Template = function () {
 
     this.defaultTemplate = '\n      <div class="stickers__item" data-id="{{id}}">\n        <div class="stickers__item__close">\n          <a href="#" class="close">X</a>\n        </div>  \n        <div class="stickers__item__title">{{title}}</div>\n          <div class="stickers__item__description">{{description}}</div>\n          <div class="stickers__item__like">\n          <a href="#" class="like{{is_liked}}">{{likes}}</a>\n       </div>\n     </div>\n     ';
   }
+
+  /**
+  * Creates an HTML string and returns it for placement in app.
+  *
+  * @param {object} data The object containing keys to replace in the template 
+  * @returns {string} HTML String with data
+  *
+  * @example
+  * template.show({
+  *  id: 1,
+  *  name: "Toyota Corolla",
+  *  speed: 180,
+  * });
+  */
+
 
   _createClass(Template, [{
     key: 'show',
@@ -823,8 +798,15 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+/**
+ * class View - here view has/do two entry points:
+ *   - bind(eventName, handler) - Registers the handler for necessary events
+ *   - render(commandName, paramsObject) - Renders the given command
+ */
 var View = function () {
   function View(options) {
+    var _this = this;
+
     _classCallCheck(this, View);
 
     this.template = options.template;
@@ -832,32 +814,25 @@ var View = function () {
     this.$container = (0, _jquery2.default)(options.containerSelector || '#stickers');
     this.deleteSelector = '.close';
     this.likeSelector = '.like';
+
+    this.commands = {
+      showItems: function showItems(params) {
+        _this.$container.html(_this.template.show(params));
+      },
+      removeItem: function removeItem(params) {
+        _this.$container.find(params.selectorId).hide();
+      },
+      likeItem: function likeItem(params) {
+        _this.$container.find(params.selectorId).find(_this.likeSelector).text(params.likes).toggleClass('liked');
+      }
+    };
   }
 
   _createClass(View, [{
     key: 'render',
     value: function render(cmd, params) {
-      var _this = this;
-
-      var selectorId = '[data-id="' + params.id + '"]';
-
-      var commands = {
-        showItems: function showItems() {
-          _this.$container.html(_this.template.show(params));
-        },
-        removeItem: function removeItem() {
-          _this.$container.find(selectorId).hide();
-        },
-        likeItem: function likeItem() {
-          _this.$container.find(selectorId).find(_this.likeSelector).text(params.likes).toggleClass('liked');
-        }
-      };
-
-      if (typeof commands[cmd] === 'undefined') {
-        return;
-      }
-
-      commands[cmd]();
+      params.selectorId = '[data-id="' + params.id + '"]';
+      this.commands[cmd](params);
     }
   }, {
     key: '_itemId',
@@ -869,19 +844,23 @@ var View = function () {
     value: function bind(event, handler) {
       var _this2 = this;
 
-      if (event === 'itemRemove') {
-        this.$container.on('click', this.deleteSelector, function (event) {
-          handler({
-            id: _this2._itemId((0, _jquery2.default)(event.target))
+      switch (event) {
+        case 'itemRemove':
+          this.$container.on('click', this.deleteSelector, function (event) {
+            handler({
+              id: _this2._itemId((0, _jquery2.default)(event.target))
+            });
           });
-        });
-      } else if (event === 'itemLike') {
-        this.$container.on('click', this.likeSelector, function (event) {
-          handler({
-            id: _this2._itemId((0, _jquery2.default)(event.target)),
-            vote: !(0, _jquery2.default)(event.target).hasClass('liked')
+          break;
+
+        case 'itemLike':
+          this.$container.on('click', this.likeSelector, function (event) {
+            handler({
+              id: _this2._itemId((0, _jquery2.default)(event.target)),
+              vote: !(0, _jquery2.default)(event.target).hasClass('liked')
+            });
           });
-        });
+          break;
       }
     }
   }]);
@@ -894,49 +873,22 @@ exports.default = View;
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
+exports.isNumeric = isNumeric;
+exports.isString = isString;
+exports.isEmpty = isEmpty;
+function isNumeric(n) {
+  return !window.isNaN(parseFloat(n)) && window.isFinite(n);
+}
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+function isString(s) {
+  return typeof s === 'string';
+}
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var Validation = function () {
-    function Validation() {
-        _classCallCheck(this, Validation);
-
-        this.isNaN = window.isNaN || function (n) {
-            return n != n;
-        };
-        this.isFinite = window.isFinite || function (n) {
-            return typeof n === 'number';
-        };
-    }
-
-    _createClass(Validation, [{
-        key: 'isNumeric',
-        value: function isNumeric(n) {
-            return !this.isNaN(parseFloat(n)) && this.isFinite(n);
-        }
-    }, {
-        key: 'isString',
-        value: function isString(s) {
-            return typeof s === 'string';
-        }
-    }, {
-        key: 'isEmpty',
-        value: function isEmpty(s) {
-            return !(this.isNumeric(s) || !!s);
-        }
-    }]);
-
-    return Validation;
-}();
-
-// (new Validation()).isNumeric(45); // true
-
-
-exports.default = Validation;
+function isEmpty(s) {
+  return !(this.isNumeric(s) || !!s);
+}
 },{}],9:[function(require,module,exports){
 /*eslint-disable no-unused-vars*/
 /*!

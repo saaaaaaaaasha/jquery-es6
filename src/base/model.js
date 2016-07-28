@@ -1,9 +1,8 @@
 export default class Model {
   constructor(options) {
     this.storage = options.storage;
-    this.validator = options.validator;
 
-    // (?)
+    // @todo To need to move this logic in other class, like "Sticker extend Collection"
     this.fieldMap = ['id', 'title', 'description', 'likes', 'is_liked'];
   }
 
@@ -112,7 +111,6 @@ export default class Model {
         return false;
       }
     });*/
-    
     return true;
   }
 

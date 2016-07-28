@@ -6,12 +6,15 @@ const Stickers    = require('./modules/stickers.js'),
 const app   = express(),
       port  = 8089;
 
-app.use(bodyParser.json());
-/*app.use(bodyParser.urlencoded({ 
+/*
+// for testing via postman
+app.use(bodyParser.urlencoded({ 
   extended: true 
-}));*/
-app.use(express.static(__dirname + '/../public'));
+}));
+*/
 
+app.use(bodyParser.json());
+app.use(express.static(__dirname + '/../public'));
 app.listen(port, console.log('Server is running on port', port));
 
 const items = new Stickers();
@@ -23,7 +26,8 @@ app.get('/stickers', function(req, res) {
 app.put('/sticker/:id/like', function(req, res) {
   let id = req.params.id;
   let vote = (req.body.vote) ? 1 : -1;
-  items.updateLikes(id, vote, (p) => {
+
+  items.updateLikes({id: id, vote: vote}, (p) => {
     res.send({
       status: p.status,
       likes: p.likes
@@ -33,7 +37,8 @@ app.put('/sticker/:id/like', function(req, res) {
 
 app.delete('/sticker/:id', function(req, res) {
   let id = req.params.id;
-  items.deleteItem(id, (status) => {
-    res.send({status: status});
+
+  items.deleteItem(id, (p) => {
+    res.send({status: p.status});
   });
 });

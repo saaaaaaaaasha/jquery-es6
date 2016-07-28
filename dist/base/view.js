@@ -14,8 +14,15 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+/**
+ * class View - here view has/do two entry points:
+ *   - bind(eventName, handler) - Registers the handler for necessary events
+ *   - render(commandName, paramsObject) - Renders the given command
+ */
 var View = function () {
   function View(options) {
+    var _this = this;
+
     _classCallCheck(this, View);
 
     this.template = options.template;
@@ -23,32 +30,25 @@ var View = function () {
     this.$container = (0, _jquery2.default)(options.containerSelector || '#stickers');
     this.deleteSelector = '.close';
     this.likeSelector = '.like';
+
+    this.commands = {
+      showItems: function showItems(params) {
+        _this.$container.html(_this.template.show(params));
+      },
+      removeItem: function removeItem(params) {
+        _this.$container.find(params.selectorId).hide();
+      },
+      likeItem: function likeItem(params) {
+        _this.$container.find(params.selectorId).find(_this.likeSelector).text(params.likes).toggleClass('liked');
+      }
+    };
   }
 
   _createClass(View, [{
     key: 'render',
     value: function render(cmd, params) {
-      var _this = this;
-
-      var selectorId = '[data-id="' + params.id + '"]';
-
-      var commands = {
-        showItems: function showItems() {
-          _this.$container.html(_this.template.show(params));
-        },
-        removeItem: function removeItem() {
-          _this.$container.find(selectorId).hide();
-        },
-        likeItem: function likeItem() {
-          _this.$container.find(selectorId).find(_this.likeSelector).text(params.likes).toggleClass('liked');
-        }
-      };
-
-      if (typeof commands[cmd] === 'undefined') {
-        return;
-      }
-
-      commands[cmd]();
+      params.selectorId = '[data-id="' + params.id + '"]';
+      this.commands[cmd](params);
     }
   }, {
     key: '_itemId',
@@ -60,19 +60,23 @@ var View = function () {
     value: function bind(event, handler) {
       var _this2 = this;
 
-      if (event === 'itemRemove') {
-        this.$container.on('click', this.deleteSelector, function (event) {
-          handler({
-            id: _this2._itemId((0, _jquery2.default)(event.target))
+      switch (event) {
+        case 'itemRemove':
+          this.$container.on('click', this.deleteSelector, function (event) {
+            handler({
+              id: _this2._itemId((0, _jquery2.default)(event.target))
+            });
           });
-        });
-      } else if (event === 'itemLike') {
-        this.$container.on('click', this.likeSelector, function (event) {
-          handler({
-            id: _this2._itemId((0, _jquery2.default)(event.target)),
-            vote: !(0, _jquery2.default)(event.target).hasClass('liked')
+          break;
+
+        case 'itemLike':
+          this.$container.on('click', this.likeSelector, function (event) {
+            handler({
+              id: _this2._itemId((0, _jquery2.default)(event.target)),
+              vote: !(0, _jquery2.default)(event.target).hasClass('liked')
+            });
           });
-        });
+          break;
       }
     }
   }]);
