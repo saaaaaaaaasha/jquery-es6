@@ -21,7 +21,7 @@ var Controller = function () {
       return _this.removeItem(item.id);
     });
     this.view.bind('itemLike', function (item) {
-      return _this.likeItem(item.id);
+      return _this.likeItem(item.id, item.vote);
     });
 
     this.renderItems();
@@ -38,10 +38,10 @@ var Controller = function () {
     }
   }, {
     key: 'likeItem',
-    value: function likeItem(id) {
+    value: function likeItem(id, vote) {
       var _this3 = this;
 
-      this.model.like(id, function (likes) {
+      this.model.like(id, vote, function (likes) {
         return _this3.view.render('likeItem', { id: id, likes: likes });
       });
     }
@@ -51,7 +51,6 @@ var Controller = function () {
       var _this4 = this;
 
       var stickers = this.model.findAll(function (items) {
-        console.log(items);
         _this4.view.render('showItems', items);
       });
     }

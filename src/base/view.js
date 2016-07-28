@@ -39,11 +39,16 @@ export default class View {
   bind(event, handler) {
     if (event === 'itemRemove') {
       this.$container.on('click', this.deleteSelector, (event) => {
-        handler({id: this._itemId($(event.target))});
+        handler({
+          id: this._itemId($(event.target))
+        });
       });
     } else if (event === 'itemLike') {
       this.$container.on('click', this.likeSelector, (event) => {
-        handler({id: this._itemId($(event.target))});
+        handler({
+          id: this._itemId($(event.target)), 
+          vote: !$(event.target).hasClass('liked')
+        });
       });
     }
   }

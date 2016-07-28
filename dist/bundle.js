@@ -1,6 +1,8 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict';
 
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
 var _jquery = require('jquery');
 
 var _jquery2 = _interopRequireDefault(_jquery);
@@ -25,36 +27,123 @@ var _controller = require('./base/controller');
 
 var _controller2 = _interopRequireDefault(_controller);
 
+var _validation = require('./util/validation');
+
+var _validation2 = _interopRequireDefault(_validation);
+
+var _external_store = require('./base/external_store');
+
+var _external_store2 = _interopRequireDefault(_external_store);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var jStickers = function jStickers(el) {
-	_classCallCheck(this, jStickers);
+/**
+ * class jStickers
+ * Create all necessary object for stikers work
+ */
+var jStickers = function () {
+  function jStickers(el) {
+    _classCallCheck(this, jStickers);
 
-	var name = 'ES6';
-	(0, _jquery2.default)('body').append('Hello from {{name}}');
+    /**
+     * Service to share information with the server, 
+     * synchronize and request for delete/like stickers
+     * 
+     * @type {ExternalStore} [externalStorage]
+     */
+    var externalStorage = new _external_store2.default(),
 
-	var template = new _template2.default(),
-	    storage = new _store2.default(),
-	    model = new _model2.default({
-		storage: storage
-	}),
-	    view = new _view2.default({
-		template: template
-	}),
-	    controller = new _controller2.default({
-		model: model,
-		view: view
-	});
-};
 
-;
+    /**
+     * [validator description]
+     * @type {Validation}
+     */
+    validator = new _validation2.default(),
+        template = new _template2.default(),
+        storage = new _store2.default({
+      name: 'stickers',
+      external: externalStorage
+    }),
+        model = new _model2.default({
+      storage: storage,
+      validator: validator
+    }),
+        view = new _view2.default({
+      template: template
+    }),
+        controller = new _controller2.default({
+      model: model,
+      view: view
+    });
+
+    // @todo synchronize external data with local (maybe by websoket)
+    this.loadStikers(externalStorage, model, controller);
+  }
+
+  /**
+   * Firstly loading stikers from server and save it in local storage
+   * @todo to need to move this method
+   * 
+   * @param  {ExternalStore} external
+   * @param  {Model} model
+   * @param  {Controller} controller
+   */
+
+
+  _createClass(jStickers, [{
+    key: 'loadStikers',
+    value: function loadStikers(external, model, controller) {
+      external.sync().then(function (data) {
+        console.log('after external sync:' + JSON.stringify(data));
+        var ids = [];
+        data.items.forEach(function (item) {
+          if (model.validate(item)) {
+            ids.push(item.id);
+            model.find({ 'id': item.id }, function (data) {
+              // if data has already exist, then update it
+              if (data.length) {
+                model.update(item, function (updateData) {
+                  console.log('update ' + data[0].title + ' (#' + data[0].id + ')');
+                  controller.renderItems();
+                });
+              } else {
+                model.save(item, function (newData) {
+                  console.log('create ' + newData[0].title + ' (#' + newData[0].id + ')');
+                  controller.renderItems();
+                });
+              }
+            });
+          }
+        });
+        console.log('3434');
+        return ids;
+      }).then(function (ids) {
+        //console.log(ids);
+        //return; 
+        model.findAll(function (items) {
+          items.forEach(function (item) {
+            // if local data is outdated, deleted that from local storage
+            if (!~ids.indexOf(item.id)) {
+              model.remove(item.id);
+            }
+          });
+        });
+      }).catch(function (error) {
+        // error instanceof Error. show message for testing
+        console.error(error.message);
+      });
+    }
+  }]);
+
+  return jStickers;
+}();
 
 (0, _jquery2.default)(function () {
-	new jStickers({ el: document.body });
+  new jStickers({ el: document.body });
 });
-},{"./base/controller":2,"./base/model":3,"./base/store":4,"./base/template":5,"./base/view":6,"jquery":7}],2:[function(require,module,exports){
+},{"./base/controller":2,"./base/external_store":3,"./base/model":4,"./base/store":5,"./base/template":6,"./base/view":7,"./util/validation":8,"jquery":9}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -78,7 +167,7 @@ var Controller = function () {
       return _this.removeItem(item.id);
     });
     this.view.bind('itemLike', function (item) {
-      return _this.likeItem(item.id);
+      return _this.likeItem(item.id, item.vote);
     });
 
     this.renderItems();
@@ -95,10 +184,10 @@ var Controller = function () {
     }
   }, {
     key: 'likeItem',
-    value: function likeItem(id) {
+    value: function likeItem(id, vote) {
       var _this3 = this;
 
-      this.model.like(id, function (likes) {
+      this.model.like(id, vote, function (likes) {
         return _this3.view.render('likeItem', { id: id, likes: likes });
       });
     }
@@ -108,7 +197,6 @@ var Controller = function () {
       var _this4 = this;
 
       var stickers = this.model.findAll(function (items) {
-        console.log(items);
         _this4.view.render('showItems', items);
       });
     }
@@ -119,7 +207,7 @@ var Controller = function () {
 
 exports.default = Controller;
 },{}],3:[function(require,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -127,40 +215,262 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _jquery = require('jquery');
+
+var _jquery2 = _interopRequireDefault(_jquery);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Model = function () {
-  function Model(options) {
-    _classCallCheck(this, Model);
+var ExternalStore = function () {
+  function ExternalStore() {
+    _classCallCheck(this, ExternalStore);
 
-    this.storage = options.storage;
+    this.config = {
+      get: 'GET http://localhost:8089/stickers',
+      delete: 'DELETE http://localhost:8089/sticker/:id',
+      like: 'PUT http://localhost:8089/sticker/:id/like'
+    };
   }
 
-  _createClass(Model, [{
-    key: "findAll",
-    value: function findAll(callback) {
-      this.storage.findAll(callback);
+  _createClass(ExternalStore, [{
+    key: 'sync',
+    value: function sync() {
+      var _this = this;
+
+      var params = this.config.get.split(' ');
+
+      return new Promise(function (resolve, reject) {
+        _this.fetch({
+          url: params[1],
+          method: params[0]
+        }).then(function (response) {
+          resolve(response);
+        }).catch(function (error) {
+          // error instanceof Error. show message for testing
+          console.error(error.message);
+        });
+      });
     }
   }, {
-    key: "like",
-    value: function like(id, callback) {
-      var like = 14;
-      callback(like);
-      //this.getStorage().like(id, callback);
+    key: 'send',
+    value: function send(query, data, callback) {
+      callback = callback || function () {};
+      data = data || null;
+
+      if (this.config[query]) {
+        var params = this.config[query].split(' ');
+
+        this.fetch({
+          url: params[1],
+          method: params[0],
+          data: data
+        }).then(function (response) {
+          callback(response);
+        }).catch(function (error) {
+          // error instanceof Error. show message for testing
+          console.error(error.message);
+        });
+      }
     }
   }, {
-    key: "remove",
-    value: function remove(id, callback) {
-      callback();
-      //this.getStorage().remove(id, callback);
+    key: 'fetch',
+    value: function fetch(options) {
+
+      if (options.data && options.data.id) {
+        options.url = options.url.replace(':id', options.data.id);
+      }
+
+      return new Promise(function (resolve, reject) {
+
+        var params = {};
+
+        params.url = options.url;
+        params.method = options.method || 'GET';
+        params.dataType = options.dataType || 'json';
+        params.data = JSON.stringify(options.data || null);
+        params.contentType = 'application/json';
+
+        params.success = function (data) {
+          resolve(data);
+        };
+        params.error = function (jqXHR, textStatus) {
+          reject(new Error('Network Error. Request failed: ' + textStatus));
+        };
+
+        _jquery2.default.ajax(params);
+      });
     }
   }]);
 
-  return Model;
+  return ExternalStore;
+}();
+
+exports.default = ExternalStore;
+},{"jquery":9}],4:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+		value: true
+});
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Model = function () {
+		function Model(options) {
+				_classCallCheck(this, Model);
+
+				this.storage = options.storage;
+				this.validator = options.validator;
+
+				// (?)
+				this.fieldMap = ['id', 'title', 'description', 'likes', 'is_liked'];
+		}
+
+		/**
+   * Save a new item if data is valid.
+   * @param {object} data
+   * @param {function} callback
+   */
+
+
+		_createClass(Model, [{
+				key: 'save',
+				value: function save(data, callback) {
+						callback = callback || function () {};
+
+						if (this.validate(data)) {
+								var fields = this.getData(data);
+								this.storage.save(fields, callback);
+						}
+				}
+
+				/**
+     * Finds a model in storage. If query is number or sting, then its will be id
+     * and find model with this id. If query is object, find appropriate models
+     *
+     * @param {string|number|object} [query] A query to match models against
+     * @param {function} [callback] The callback to call after the model(s) is(are) found
+     *
+     * @example
+     * model.find(1, function(){}); // Will find the model with an ID of 1
+     * model.find({ foo: 'bar' });
+     */
+
+		}, {
+				key: 'find',
+				value: function find(query, callback) {
+
+						var queryType = typeof query === 'undefined' ? 'undefined' : _typeof(query);
+						callback = callback || function () {};
+						query = query || {};
+
+						// If query is callback, findAll and fire callback
+						if (queryType === 'function') {
+								callback = query;
+								this.storage.findAll(callback);
+						} else if (queryType === 'string' || queryType === 'number') {
+								query = parseInt(query, 10);
+								this.storage.find({ id: query }, callback);
+						} else {
+								this.storage.find(query, callback);
+						}
+				}
+		}, {
+				key: 'findAll',
+
+
+				/**
+     * Find all models
+     */
+				value: function findAll(callback) {
+						callback = callback || function () {};
+						this.storage.findAll(callback);
+				}
+
+				/**
+     * Updates a model by ID
+     */
+
+		}, {
+				key: 'update',
+				value: function update(data, callback) {
+						callback = callback || function () {};
+
+						if (this.validate(data)) {
+								var fields = this.getData(data);
+								this.storage.save(fields, callback, data.id);
+						}
+				}
+		}, {
+				key: 'like',
+				value: function like(id, vote, callback) {
+						callback = callback || function () {};
+						this.storage.like(id, !!vote, callback);
+				}
+
+				/**
+     * Removes a model from storage
+     */
+
+		}, {
+				key: 'remove',
+				value: function remove(id, callback) {
+						callback = callback || function () {};
+						this.storage.remove(id, callback);
+				}
+
+				/**
+     * WARNING: Remove all data from storage.
+     */
+
+		}, {
+				key: 'removeAll',
+				value: function removeAll(callback) {
+						callback = callback || function () {};
+						this.storage.drop(callback);
+				}
+		}, {
+				key: 'getData',
+				value: function getData(data) {
+						var fields = {};
+						this.fieldMap.forEach(function (name) {
+								if (typeof data[name] !== 'undefined') {
+										fields[name] = data[name];
+								}
+						});
+						return fields;
+				}
+
+				/*
+     * Validate fields 
+     */
+
+		}, {
+				key: 'validate',
+				value: function validate(data) {
+						// @todo implement
+
+						/*this.fieldMap.forEach((value) => {
+        if (this.validator.isEmpty(value)) {
+          return false;
+        }
+      });*/
+
+						return true;
+				}
+		}]);
+
+		return Model;
 }();
 
 exports.default = Model;
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -171,43 +481,257 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+//import Helpers from './util/helpers';
+
 var Store = function () {
-  function Store(callback) {
+
+  /**
+   * Create a new storage object and will create an empty collection 
+   * if no collection already exists.
+   * 
+   * @constructor
+   * @param {string} name The name of collection
+   * @param {function} callback The callback to call when the store was loaded
+   */
+  function Store(options) {
     _classCallCheck(this, Store);
 
-    callback = callback || function () {};
-    callback.call(this, this.findAll());
+    var callback = options.callback || function () {};
+    var name = options.name;
+
+    /**
+     * @see https://developer.mozilla.org/docs/Web/API/Window/localStorage
+     */
+    this.localStorage = window.localStorage || {};
+    this._key = name;
+    this.external = options.external;
+
+    // Create localStorage with appropriate name if it didn't exits
+    if (!this.localStorage[name]) {
+      var data = { models: [] };
+      this.set(data);
+    }
+
+    console.log('Store start');
+    //this.request('/stickers', {
+    //  onSuccess: callback
+    //});
+
+    callback(this.get());
+
+    //callback.call(this, this.findAll());
   }
 
+  /**
+   * Finds items by query - just object, like {}
+   *
+   * @param {object} query The query to match against (i.e. {foo: 'bar'})
+   * @param {function} callback
+   *
+   * @example
+   * storage.find({foo: 'bar'}, function (data) {
+   *   // data will return any items that have foo: bar in their properties
+   * });
+   */
+
+
   _createClass(Store, [{
+    key: 'find',
+    value: function find(query, callback) {
+      if (typeof callback !== 'function') {
+        return;
+      }
+
+      var models = this.get().models,
+          query = query || {};
+
+      callback.call(this, models.filter(function (model) {
+        for (var q in query) {
+          if (query.hasOwnProperty(q)) {
+            if (query[q] !== model[q]) {
+              return false;
+            }
+          }
+        }
+        return true;
+      }));
+    }
+
+    /**
+     * Get all data from the collection
+     * @param {function} callback
+     */
+
+  }, {
     key: 'findAll',
     value: function findAll(callback) {
       callback = callback || function () {};
-      console.log('Store.findAll');
-      this.request('/stickers', {
-        onSuccess: callback
-      });
+      callback.call(this, this.get().models);
+    }
+
+    /**
+     * Save the given data to the store. If item don't exists that 
+     * it will create a new item, otherwise update an existing item's properties
+     * 
+     * @param {object} data   
+     * @param {function} callback
+     * @param {number} id
+     */
+
+  }, {
+    key: 'save',
+    value: function save(data, callback, id) {
+      callback = callback || function () {};
+
+      if (id) {
+        this.update(data, id, callback);
+      } else {
+        this.create(data, callback);
+      }
     }
   }, {
-    key: 'remove',
-    value: function remove(id, callback) {
-      console.log('Store.remove');
-      this.request('/sticker/:id', {
-        method: 'DELETE',
-        id: id,
-        onSuccess: callback
-      });
+    key: 'create',
+    value: function create(item, callback) {
+      var data = this.get(),
+          models = data.models;
+
+      models.push(item);
+
+      this.set(data);
+      callback.call(this, [item]);
     }
   }, {
     key: 'like',
-    value: function like(id, callback) {
-      console.log('Store.like');
-      this.request('/sticker/:id/like', {
-        method: 'POST',
-        id: id,
-        onSuccess: callback
+    value: function like(id, vote, callback) {
+      var _this = this;
+
+      callback = callback || function () {};
+
+      this.find({ id: +id }, function (items) {
+        var item = items[0];
+        _this.external.send('like', { id: id, 'vote': vote }, function (res) {
+          if (res.status) {
+            item.likes = res.likes;
+            item.is_liked = !!vote;
+            _this.update(item, item.id, function () {
+              callback(item.likes);
+            });
+          }
+        });
       });
     }
+  }, {
+    key: 'update',
+    value: function update(updateData, id, callback) {
+      var data = this.get(),
+          models = data.models;
+
+      for (var i = 0; i < models.length; i++) {
+        if (models[i].id === id) {
+          for (var key in updateData) {
+            if (updateData.hasOwnProperty(key)) {
+              models[i][key] = updateData[key];
+            }
+          }
+          break;
+        }
+      }
+
+      this.set(data);
+      callback.call(this, this.get().models);
+    }
+
+    /**
+     * Remove an item from the store by its
+     * @param {number} id The identifier of item
+     * @param {function} callback
+     */
+
+  }, {
+    key: 'remove',
+    value: function remove(id, callback) {
+      var _this2 = this;
+
+      var data = this.get();
+      var models = data.models;
+
+      callback = callback || function () {};
+      this.external.send('delete', { id: id }, function (res) {
+        //if (res.status) {
+        for (var i = 0, length = models.length; i < length; i++) {
+          if (models[i].id === +id) {
+            models.splice(i, 1);
+            break;
+          }
+        }
+        _this2.set(data);
+        callback.call(_this2, _this2.get().models);
+        //}
+      });
+    }
+
+    /**
+     * Drop current storage
+     * @param {function} callback
+     */
+
+  }, {
+    key: 'drop',
+    value: function drop(callback) {
+      this.set({ models: [] });
+      callback.call(this, this.get().models);
+    }
+
+    /**
+     * Set data to store
+     * @param {object} data obj
+     */
+
+  }, {
+    key: 'set',
+    value: function set(data) {
+      data = data || {};
+      localStorage[this._key] = JSON.stringify(data);
+    }
+
+    /**
+     * Get data from store
+     * @returns {string} HTML String of an <tr> element   
+     */
+
+  }, {
+    key: 'get',
+    value: function get() {
+      return JSON.parse(localStorage[this._key]);
+    }
+
+    /*
+      findAll(callback) {
+        callback = callback || function () {};
+        console.log('Store.findAll');
+        this.request('/stickers', {
+          onSuccess: callback
+        });
+      }
+    
+      remove(id, callback) {
+        console.log('Store.remove');
+        this.request('/sticker/:id', {
+          method: 'DELETE',
+          id: id,
+          onSuccess: callback
+        });
+      }
+    
+      like(id, callback) {
+        console.log('Store.like');
+        this.request('/sticker/:id/like', {
+          method: 'POST',
+          id: id,
+          onSuccess: callback
+        });
+      }*/
+
   }, {
     key: 'request',
     value: function request(url, options) {
@@ -245,11 +769,11 @@ var Store = function () {
 }();
 
 exports.default = Store;
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-	value: true
+  value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -257,38 +781,36 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var Template = function () {
-	function Template() {
-		_classCallCheck(this, Template);
+  function Template() {
+    _classCallCheck(this, Template);
 
-		this.defaultTemplate = '\n\t\t\t<div class="stickers__item" data-id="{{id}}">\n        <div class="stickers__item__close">\n          <a href="#" class="close">X</a>\n        </div>  \n        <div class="stickers__item__title">{{title}}</div>\n          <div class="stickers__item__description">{{description}}</div>\n          <div class="stickers__item__like">\n          <a href="#" class="like{{is_liked}}">{{likes}}</a>\n       </div>\n     </div>\n     ';
-	}
+    this.defaultTemplate = '\n      <div class="stickers__item" data-id="{{id}}">\n        <div class="stickers__item__close">\n          <a href="#" class="close">X</a>\n        </div>  \n        <div class="stickers__item__title">{{title}}</div>\n          <div class="stickers__item__description">{{description}}</div>\n          <div class="stickers__item__like">\n          <a href="#" class="like{{is_liked}}">{{likes}}</a>\n       </div>\n     </div>\n     ';
+  }
 
-	_createClass(Template, [{
-		key: 'show',
-		value: function show(data) {
-			var _this = this;
+  _createClass(Template, [{
+    key: 'show',
+    value: function show(data) {
+      var _this = this;
 
-			console.log(data);
+      var view = data.map(function (d) {
+        var template = _this.defaultTemplate;
 
-			var view = data.map(function (d) {
-				var template = _this.defaultTemplate;
+        return template.replace('{{id}}', d.id).replace('{{title}}', d.title).replace('{{description}}', d.description).replace('{{is_liked}}', d.is_liked ? ' liked' : '').replace('{{likes}}', d.likes);
+      });
 
-				return template.replace('{{id}}', d.id).replace('{{title}}', d.title).replace('{{description}}', d.description).replace('{{is_liked}}', d.isLiked ? ' liked' : '').replace('{{likes}}', d.likes);
-			});
+      return view.join('');
+    }
+  }]);
 
-			return view.join('');
-		}
-	}]);
-
-	return Template;
+  return Template;
 }();
 
 exports.default = Template;
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-	value: true
+  value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -302,68 +824,120 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var View = function () {
-	function View(options) {
-		_classCallCheck(this, View);
+  function View(options) {
+    _classCallCheck(this, View);
 
-		this.template = options.template;
+    this.template = options.template;
 
-		this.$container = (0, _jquery2.default)(options.containerSelector || '#stickers');
-		this.deleteSelector = '.close';
-		this.likeSelector = '.like';
-	}
+    this.$container = (0, _jquery2.default)(options.containerSelector || '#stickers');
+    this.deleteSelector = '.close';
+    this.likeSelector = '.like';
+  }
 
-	_createClass(View, [{
-		key: 'render',
-		value: function render(cmd, params) {
-			var _this = this;
+  _createClass(View, [{
+    key: 'render',
+    value: function render(cmd, params) {
+      var _this = this;
 
-			var selectorId = '[data-id="' + params.id + '"]';
+      var selectorId = '[data-id="' + params.id + '"]';
 
-			var commands = {
-				showItems: function showItems() {
-					_this.$container.html(_this.template.show(params));
-				},
-				removeItem: function removeItem() {
-					_this.$container.find(selectorId).hide();
-				},
-				likeItem: function likeItem() {
-					_this.$container.find(selectorId).find(_this.likeSelector).text(params.likes).toggleClass('liked');
-				}
-			};
+      var commands = {
+        showItems: function showItems() {
+          _this.$container.html(_this.template.show(params));
+        },
+        removeItem: function removeItem() {
+          _this.$container.find(selectorId).hide();
+        },
+        likeItem: function likeItem() {
+          _this.$container.find(selectorId).find(_this.likeSelector).text(params.likes).toggleClass('liked');
+        }
+      };
 
-			if (typeof commands[cmd] === 'undefined') {
-				return;
-			}
+      if (typeof commands[cmd] === 'undefined') {
+        return;
+      }
 
-			commands[cmd]();
-		}
-	}, {
-		key: '_itemId',
-		value: function _itemId($element) {
-			return $element.closest('.stickers__item').attr('data-id');
-		}
-	}, {
-		key: 'bind',
-		value: function bind(event, handler) {
-			var _this2 = this;
+      commands[cmd]();
+    }
+  }, {
+    key: '_itemId',
+    value: function _itemId($element) {
+      return $element.closest('.stickers__item').attr('data-id');
+    }
+  }, {
+    key: 'bind',
+    value: function bind(event, handler) {
+      var _this2 = this;
 
-			if (event === 'itemRemove') {
-				this.$container.on('click', this.deleteSelector, function (event) {
-					handler({ id: _this2._itemId((0, _jquery2.default)(event.target)) });
-				});
-			} else if (event === 'itemLike') {
-				this.$container.on('click', this.likeSelector, function (event) {
-					handler({ id: _this2._itemId((0, _jquery2.default)(event.target)) });
-				});
-			}
-		}
-	}]);
+      if (event === 'itemRemove') {
+        this.$container.on('click', this.deleteSelector, function (event) {
+          handler({
+            id: _this2._itemId((0, _jquery2.default)(event.target))
+          });
+        });
+      } else if (event === 'itemLike') {
+        this.$container.on('click', this.likeSelector, function (event) {
+          handler({
+            id: _this2._itemId((0, _jquery2.default)(event.target)),
+            vote: !(0, _jquery2.default)(event.target).hasClass('liked')
+          });
+        });
+      }
+    }
+  }]);
 
-	return View;
+  return View;
 }();
 
 exports.default = View;
-},{"jquery":7}],7:[function(require,module,exports){
+},{"jquery":9}],8:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Validation = function () {
+    function Validation() {
+        _classCallCheck(this, Validation);
+
+        this.isNaN = window.isNaN || function (n) {
+            return n != n;
+        };
+        this.isFinite = window.isFinite || function (n) {
+            return typeof n === 'number';
+        };
+    }
+
+    _createClass(Validation, [{
+        key: 'isNumeric',
+        value: function isNumeric(n) {
+            return !this.isNaN(parseFloat(n)) && this.isFinite(n);
+        }
+    }, {
+        key: 'isString',
+        value: function isString(s) {
+            return typeof s === 'string';
+        }
+    }, {
+        key: 'isEmpty',
+        value: function isEmpty(s) {
+            return !(this.isNumeric(s) || !!s);
+        }
+    }]);
+
+    return Validation;
+}();
+
+// (new Validation()).isNumeric(45); // true
+
+
+exports.default = Validation;
+},{}],9:[function(require,module,exports){
 /*eslint-disable no-unused-vars*/
 /*!
  * jQuery JavaScript Library v3.1.0

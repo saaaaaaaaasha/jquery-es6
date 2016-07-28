@@ -16,8 +16,6 @@ export default class Template {
 
   show(data){
 
-    console.log(data);
-
     const view = data.map(d => {
       let template = this.defaultTemplate;
 
@@ -25,7 +23,7 @@ export default class Template {
         .replace('{{id}}', d.id)
         .replace('{{title}}', d.title)
         .replace('{{description}}', d.description)
-        .replace('{{is_liked}}', d.isLiked ? ' liked': '')
+        .replace('{{is_liked}}', d.is_liked ? ' liked': '')
         .replace('{{likes}}', d.likes);
     });
 
