@@ -13,6 +13,17 @@
   clear: both;
 }
 
+.stickers__item {
+  width: 150px;
+  height: 120px;
+  border: 1px solid #222;
+  background-color: #d5e8fb;
+  padding: 10px;
+  margin: 10px;
+  position: relative;
+  float: left;
+}
+
 .stickers__item a {
   color: #222;
 }
@@ -20,17 +31,6 @@
 .stickers__item a:hover {
   color: #555;
   text-decoration: none;
-}
-
-.stickers__item {
-  width: 100px;
-  height: 150px;
-  border: 1px solid #222;
-  background-color: #d5e8fb;
-  padding: 10px;
-  margin: 10px;
-  position: relative;
-  float: left;
 }
 
 .stickers__item__title {
@@ -50,7 +50,7 @@
   font-size: 12px;
   padding: 10px;
   margin-bottom: 6px;
-  height: 90px;
+  height: 60px;
   overflow: hidden;
 }
 

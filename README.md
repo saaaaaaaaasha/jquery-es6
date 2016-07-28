@@ -14,7 +14,7 @@ To develop single web-application with the following functionality:
 
 ## Installation
 
-To get started, you have to install `nodejs` and `npm`. After, using `npm` install global dependencies:
+To get started, you have to install `nodejs` and `npm`. After, using `npm` to install global dependencies:
 ```bash
 npm install -g babel browserify
 ```
