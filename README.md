@@ -1,8 +1,12 @@
-# jquery-training
+# spa-jquery-es6
+
+## Description
+
+This project is an single page application (SPA) written with the using such technologies as [npm](https://www.npmjs.com/) (Package manager), [jQuery](https://jquery.com/) (Library for js), javascript (modern standart [ES6](http://es6-features.org/)), [express](http://expressjs.com/) (framework for nodejs server). It uses pattern MVC for architecture, JSON-file like store in the server and localStorage like local store.
 
 ## Task
 
-To develop single web-application with the following functionality:
+To develop SPA with the following functionality:
 
 ![alt tag](public/i/task.png)
 
@@ -27,7 +31,7 @@ npm install
 
 ## Compiling ES6 to ES5
 
-After npm-modules have been installed, use Babel script to convert the `src` files. Browserify is also used so that `module.exports` and `require()` can be run in your browser.
+After npm-modules have been installed, use [Babel](https://babeljs.io/) script to convert the `src` files. [Browserify](http://browserify.org/) is also used so that `module.exports` and `require()` can be run in your browser.
 
 ```bash
 npm run compile
