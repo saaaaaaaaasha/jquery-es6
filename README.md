@@ -1,4 +1,4 @@
-# spa-jquery-es6
+# jquery-es6
 
 ## Description
 
